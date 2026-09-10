@@ -22,21 +22,22 @@ jobs:
 
     steps:
       - name: Checkout tested commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Login to Azure
-        uses: azure/login@v3
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Get AKS credentials
+      # A student Microsoft Entra tenant blocks service-principal creation, so
+      # instead of `azure/login` + `az aks get-credentials` we load a
+      # certificate-based admin kubeconfig from a repository secret.
+      # Generate it with:
+      #   az aks get-credentials -g <rg> -n <aks> --admin --file ./kubeconfig-admin
+      #   base64 -w0 ./kubeconfig-admin   # value of the KUBE_CONFIG secret
+      - name: Configure kubectl (admin kubeconfig)
         run: |
-          az aks get-credentials \
-            --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
-            --name ${{ vars.AKS_CLUSTER_NAME }} \
-            --overwrite-existing
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          kubectl config current-context
 
       - name: Create staging namespace
         run: |

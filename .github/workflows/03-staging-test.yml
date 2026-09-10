@@ -21,17 +21,14 @@ jobs:
       name: staging
 
     steps:
-      - name: Login to Azure
-        uses: azure/login@v3
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Get AKS credentials
+      # Certificate-based admin kubeconfig from a repository secret
+      # (a student Entra tenant blocks the service principal `azure/login` needs).
+      - name: Configure kubectl (admin kubeconfig)
         run: |
-          az aks get-credentials \
-            --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
-            --name ${{ vars.AKS_CLUSTER_NAME }} \
-            --overwrite-existing
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          kubectl config current-context
 
       - name: Wait for staging frontend IP
         run: |
