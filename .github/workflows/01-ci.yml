@@ -171,9 +171,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Security gate between build and push: a new Critical/High CVE fails
-      # the job here, before the image ever reaches ACR or a deployment
-      # could pull it.
+      # Security gate between build and push: a new, fixable Critical/High
+      # CVE introduced by this application layer fails the job here, before
+      # the image ever reaches ACR or a deployment could pull it.
+      #
+      # ignore-base: true  - don't gate on advisories that exist unchanged
+      #   in the upstream base image (e.g. Debian OS packages with no
+      #   patched version available yet) - the app team can't fix those by
+      #   changing this repo, and the base image is already confirmed
+      #   current (see Task 10.1P's `docker scout recommendations`).
+      # only-fixed: true   - don't gate on any advisory with no available
+      #   fix at all, app-layer or not - blocking forever on something
+      #   nobody can patch isn't a useful gate.
       - name: Analyze image with Docker Scout
         uses: docker/scout-action@v1
         with:
@@ -181,6 +190,8 @@ jobs:
           image: ${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
           exit-code: true
           only-severities: critical,high
+          ignore-base: true
+          only-fixed: true
 
       - name: Evaluate Docker Scout policies
         uses: docker/scout-action@v1
