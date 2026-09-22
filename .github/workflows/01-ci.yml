@@ -161,6 +161,34 @@ jobs:
             -t ${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }} \
             ./${{ matrix.service }}
 
+      # Docker Scout evaluates via Docker Hub's backend regardless of which
+      # registry hosts the image, so it needs its own Docker Hub login,
+      # separate from the ACR login above.
+      - name: Login to Docker Hub (for Docker Scout)
+        uses: docker/login-action@v4
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Security gate between build and push: a new Critical/High CVE fails
+      # the job here, before the image ever reaches ACR or a deployment
+      # could pull it.
+      - name: Analyze image with Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: ${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
+          exit-code: true
+          only-severities: critical,high
+
+      - name: Evaluate Docker Scout policies
+        uses: docker/scout-action@v1
+        with:
+          command: policy
+          image: ${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
+          organization: ${{ secrets.DOCKERHUB_USERNAME }}
+
       - name: Push Docker image with commit SHA
         run: |
           docker push \
