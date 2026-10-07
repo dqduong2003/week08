@@ -1,0 +1,91 @@
+name: Destroy Infrastructure
+
+# Tears down everything the `terraform` job in pipeline.yml created, from
+# GitHub Actions, using the same remote state and the same OIDC identity.
+# Manual only, and the run must be confirmed by typing "destroy".
+#
+# Left in place on purpose: the `sit722-cicd-bootstrap` resource group
+# (pipeline identity + Terraform state storage). Delete that by hand once
+# the task is marked (see SETUP-10.2D.md, final step).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to delete all Task 10.2D Azure resources'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: koalatech-pipeline-refs/heads/main
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+
+  TFSTATE_RESOURCE_GROUP: sit722-cicd-bootstrap
+  TFSTATE_STORAGE_ACCOUNT: kt103528453tfstate
+  TFSTATE_CONTAINER: tfstate
+  TFSTATE_KEY: week10-2d.terraform.tfstate
+
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_location: Australia East
+  TF_VAR_resource_group_name: sit722-week10-2d
+  TF_VAR_acr_name: kt103528453wk102d
+  TF_VAR_storage_account_name: kt103528453wk102dsa
+  TF_VAR_aks_cluster_name: aks-sit722-week10-2d
+  TF_VAR_aks_dns_prefix: sit722week102d
+  TF_VAR_aks_node_count: "3"
+  TF_VAR_environment: development
+
+jobs:
+  terraform-destroy:
+    name: Terraform destroy
+    runs-on: ubuntu-latest
+    if: inputs.confirm == 'destroy'
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform init (Azure Blob remote state)
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=$TFSTATE_RESOURCE_GROUP" \
+            -backend-config="storage_account_name=$TFSTATE_STORAGE_ACCOUNT" \
+            -backend-config="container_name=$TFSTATE_CONTAINER" \
+            -backend-config="key=$TFSTATE_KEY"
+
+      - name: Terraform destroy
+        run: terraform destroy -input=false -auto-approve
+
+      - name: Confirm the resource group is gone
+        run: |
+          if az group exists --name "$TF_VAR_resource_group_name" | grep -q true; then
+            echo "Resource group $TF_VAR_resource_group_name still exists"
+            exit 1
+          fi
+          echo "Resource group $TF_VAR_resource_group_name deleted."
