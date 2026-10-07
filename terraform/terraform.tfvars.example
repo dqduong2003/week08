@@ -20,8 +20,8 @@ aks_dns_prefix   = "sit722week102d"
 # kube-prometheus-stack monitoring pods added for Task 10.2D.
 aks_node_count = 3
 
-# Standard_D2s_v3 is the default. Standard_B2ms (burstable, ~half the cost)
-# also works for this practical if you want to reduce spend:
-# aks_node_vm_size = "Standard_B2ms"
+# Standard_B2s_v2 is the default (2 vCPU / 8 GiB). D2s_v3 is not allowed
+# for this subscription in Australia East, and D-series v5/v6 have 0 quota.
+# aks_node_vm_size = "Standard_B2s_v2"
 
 environment = "development"

@@ -63,7 +63,10 @@ by the pipeline. Run these commands in PowerShell, logged in with `az login`:
 ```powershell
 $SUB    = az account show --query id -o tsv
 $TENANT = az account show --query tenantId -o tsv
-$REPO   = "dqduong2003/week08"
+# GitHub OIDC subjects for this repo use the immutable-ID format
+# owner@ownerId/repo@repoId (read from a failed run's "subject claim" line,
+# or: gh api repos/dqduong2003/week08 --jq '"\(.owner.id) \(.id)"').
+$REPO   = "dqduong2003@89473635/week08@1357846053"
 $RG     = "sit722-cicd-bootstrap"
 $ID     = "gh-actions-sit722"
 
@@ -108,6 +111,13 @@ az role assignment create --assignee-object-id $PRINCIPAL_ID --assignee-principa
 
 Note the `${REPO}` braces: plain `$REPO:` would be read by PowerShell as a
 scoped variable name.
+
+**If `azure/login` fails with `AADSTS700213: No matching federated identity
+record`**, compare the log's `subject claim` line with the credentials'
+subjects. They must match character for character. GitHub sends
+`repo:owner@ownerId/repo@repoId:...` for this repo, not the older
+`repo:owner/repo:...`. Fix with `az identity federated-credential update`
+(same flags as `create`), then re-run the job.
 
 > **[Screenshot 1]** Azure portal (directory: **Swinburne University**) → search **Managed Identities** → `gh-actions-sit722` → **Settings → Federated credentials**, showing the three GitHub subjects.
 > Do not use Entra ID → *App registrations*: that lists app registrations, not managed identities. An app registration with the same name is a different object.

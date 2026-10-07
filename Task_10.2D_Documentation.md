@@ -194,6 +194,7 @@ env:
   TF_VAR_aks_cluster_name: aks-sit722-week10-2d
   TF_VAR_aks_dns_prefix: sit722week102d
   TF_VAR_aks_node_count: "3"
+  TF_VAR_aks_node_vm_size: Standard_B2s_v2
   TF_VAR_environment: development
 
 jobs:
@@ -829,6 +830,7 @@ env:
   TF_VAR_aks_cluster_name: aks-sit722-week10-2d
   TF_VAR_aks_dns_prefix: sit722week102d
   TF_VAR_aks_node_count: "3"
+  TF_VAR_aks_node_vm_size: Standard_B2s_v2
   TF_VAR_environment: development
 
 jobs:
