@@ -42,31 +42,36 @@ The `terraform` job creates its remote-state storage, then runs `fmt -check`, `i
 
 ## 3. Evidence of Docker Scout vulnerability scanning
 
-In `build-scan-push`, `docker/scout-action` runs `cves` (Critical/High, `exit-code: true`) and `policy` after the image is built and before it is pushed. Before remediation it reported these findings:
+In `build-scan-push`, `docker/scout-action` runs `cves` (Critical/High, `exit-code: true`) and `policy` after the image is built and before it is pushed.
 
-| Package | Services | Severity | CVE |
+On the first full pipeline run, Scout failed 4 of the 6 images. `student`, `lecturer`, `course` and `enrollment-service` pinned `PyJWT==2.13.0`, which has six newly published advisories:
+
+| CVE | Severity | CVSS | Issue |
 |---|---|---|---|
-| `python-multipart 0.0.20` | user, student, lecturer | HIGH | CVE-2026-24486 (path traversal, CVSS 8.6) |
-| `PyJWT 2.10.1` | all 5 backends | HIGH | CVE-2026-32597, CVE-2026-48526 |
-| `starlette` (via `fastapi 0.116.1`) | all 5 backends | HIGH | 3 advisories |
-| `curl` (`nginx:1.27-alpine`) | frontend | CRITICAL | CVE-2026-9079 |
+| CVE-2026-102268 | **CRITICAL** | 9.1 | Improper verification of cryptographic signature |
+| CVE-2026-102266, -102271, -102272, -102273 | HIGH | 7.4 | Improper verification of cryptographic signature |
+| CVE-2026-102267 | HIGH | 7.4 | Exposure of sensitive information |
 
-> **[Screenshot 6]** Docker Scout step failing, with the CVE list in the log.
+All six are fixed in `PyJWT 2.14.0`. `user-service` passed only because it declared `PyJWT>=2.13.0`, so pip happened to install a newer, unaffected release.
 
-> **[Screenshot 7]** Deployment jobs not run for that commit: the gate blocked promotion.
+> **[Screenshot 6]** `Build, scan and push koalatech-student-service` failing at **Analyze image with Docker Scout**, with the CVE list in the log.
+
+> **[Screenshot 7]** Run graph: four scan jobs failed, and `Deploy to Staging` through `Deploy Monitoring` were skipped. The gate blocked promotion.
 
 ---
 
 ## 4. Evidence of remediation
 
-Commit `d4cd1c5`:
+**Fix for the findings above:** all five backend `requirements.txt` files now pin `PyJWT==2.14.0`, the fixed version Scout reported. `user-service` is pinned exactly as well, so its build no longer depends on whatever version pip resolves at build time.
 
-1. Bumped `python-multipart` to `0.0.30` and `PyJWT` to `2.13.0`.
-2. Bumped `fastapi` to `0.133.0`. The fixed `starlette` versions exceed `fastapi 0.116.1`'s `starlette<0.48.0` bound, so pinning `starlette` alone would break `pip install`.
-3. Added `apk update && apk upgrade` to the final stage of `frontend/Dockerfile`, so the image picks up Alpine's patched `curl`.
-4. Set `ignore-base: true` / `only-fixed: true` on the gate. Two HIGH CVEs in Debian's `zlib`/`perl` in `python:3.12-slim` have no upstream fix. The gate still blocks every fixable application-layer finding.
+> **[Screenshot 8]** The re-run after the fix, with **Analyze image with Docker Scout** passing for every image.
 
-> **[Screenshot 8]** Docker Scout step **passing** for the remediated images.
+**Earlier remediation rounds** (commit `d4cd1c5`), found the same way:
+
+1. `python-multipart` 0.0.20 → 0.0.30 (CVE-2026-24486, HIGH, path traversal) and `PyJWT` 2.10.1 → 2.13.0 (CVE-2026-32597 / -48526).
+2. `fastapi` 0.116.1 → 0.133.0. This cleared three HIGH `starlette` CVEs whose fixed versions exceed fastapi's old `starlette<0.48.0` bound.
+3. Added `apk update && apk upgrade` to the frontend's `nginx:1.27-alpine` stage, which picks up the patched `curl` (CVE-2026-9079, CRITICAL).
+4. Set `ignore-base: true` / `only-fixed: true`. Two HIGH CVEs in Debian `zlib`/`perl` in `python:3.12-slim` have no upstream fix. The gate still blocks every fixable application-layer finding.
 
 ---
 

@@ -39,8 +39,8 @@ Numbers match the order the screenshots appear in `Task_10.2D_Documentation.md`.
 | 3 | Portal: resource group `sit722-week10-2d` and its resources | Step 3 | §2 Terraform |
 | 4 | *(optional)* Re-run: Terraform `No changes` | Step 3 | §2 Terraform |
 | 5 | `Destroy Infrastructure` run green | Step 7 | §2 Terraform |
-| 6 | Docker Scout step **failing** with the CVE list | Step 6 (reuse from first submission) | §3 Scout scanning |
-| 7 | Deployment blocked for that commit | Step 6 (reuse from first submission) | §3 Scout scanning |
+| 6 | Docker Scout step **failing** with the CVE list | Step 6 (failed run #2) | §3 Scout scanning |
+| 7 | Deployment blocked for that commit | Step 6 (failed run #2) | §3 Scout scanning |
 | 8 | Docker Scout step **passing** in `build-scan-push` | Step 3 | §4 Remediation |
 | M1–M3 | Monitoring pods, managed Prometheus (optional), Grafana login | Step 5 → `MONITORING-SETUP.md` | §5 Monitoring deployed |
 | M4–M9 | Grafana dashboards, Prometheus targets and query | Step 5 → `MONITORING-SETUP.md` | §6 Dashboards & metrics |
@@ -211,19 +211,17 @@ Follow `MONITORING-SETUP.md` (Screenshots M1–M9).
 
 ## Step 6 – Docker Scout "before" evidence
 
-The report needs the gate shown **failing** as well as passing (Screenshot 8).
-The "before" screenshots from the first submission are still valid evidence
-of the gate. They show the same scan step, which now lives in
-`pipeline.yml`'s `build-scan-push` job. Reuse them as Screenshots 6–7.
+The first full pipeline run (run #2, commit `d15c1fb`) failed the Scout gate
+for real. Four services pinned `PyJWT==2.13.0`, which has newly published
+CVEs (1 CRITICAL, 5 HIGH, all fixed in 2.14.0). Capture these from that run
+**before** pushing the fix:
 
-> **[Screenshot 6]** CI failing at "Analyze image with Docker Scout", with the CVE list visible in the log (first submission's Screenshot 3).
-> **[Screenshot 7]** Deployment not running for that commit, showing the gate blocked promotion (first submission's Screenshot 4).
+> **[Screenshot 6]** `Build, scan and push koalatech-student-service` → **Analyze image with Docker Scout** failing, with the CVE list visible in the log.
 
-**Alternative (re-capture under the new pipeline):** temporarily set
-`PyJWT==2.10.1` in one service's `requirements.txt` and push to `main`. The
-Scout step fails, and the run graph shows `deploy-staging` →
-`deploy-monitoring` as **skipped**. Capture that as Screenshots 6–7, then
-revert and push again.
+> **[Screenshot 7]** The run's summary graph: four scan jobs failed, and `Deploy to Staging` → `Deploy Monitoring` skipped.
+
+Then commit and push the fix (`PyJWT==2.14.0` in all five
+`requirements.txt`). The next run's passing Scout step is Screenshot 8.
 
 ---
 
