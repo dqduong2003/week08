@@ -5,11 +5,10 @@ resource "azurerm_container_registry" "acr" {
 
   sku = "Basic"
 
-  # Admin user is enabled so GitHub Actions can authenticate to the registry
-  # with a username/password (see 01-ci.yml). A student Microsoft Entra tenant
-  # blocks service-principal creation, so the admin credential replaces the
-  # service principal for the "docker push to ACR" step.
-  admin_enabled = true
+  # Admin user is disabled: GitHub Actions authenticates to the registry with
+  # `az acr login` using its OIDC-federated managed identity, so no registry
+  # password exists anywhere.
+  admin_enabled = false
 
   tags = merge(
     var.tags,

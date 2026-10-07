@@ -1,4 +1,6 @@
-# Copy this file to terraform.tfvars and adjust the values.
+# Reference only: the pipeline passes these same values as TF_VAR_* env vars
+# (see .github/workflows/pipeline.yml). Copy to terraform.tfvars only for a
+# local `terraform plan` dry run.
 # terraform.tfvars is git-ignored (see .gitignore) - do not commit real values.
 
 location = "Australia East"
@@ -6,10 +8,10 @@ location = "Australia East"
 resource_group_name = "sit722-week10-2d"
 
 # ACR name: 5-50 characters, alphanumeric only, GLOBALLY unique
-acr_name = "s225757776week102d"
+acr_name = "kt103528453wk102d"
 
 # Storage account name: 3-24 characters, lowercase letters and digits only, GLOBALLY unique
-storage_account_name = "s225757776week102dsa"
+storage_account_name = "kt103528453wk102dsa"
 
 aks_cluster_name = "aks-sit722-week10-2d"
 aks_dns_prefix   = "sit722week102d"

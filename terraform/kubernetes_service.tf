@@ -16,7 +16,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   # Local (certificate-based) admin accounts stay enabled so an admin
-  # kubeconfig can be exported and used by GitHub Actions without Entra.
+  # kubeconfig can be fetched by GitHub Actions with
+  # `az aks get-credentials --admin` (the pipeline identity is Contributor).
   local_account_disabled = false
 
   tags = merge(
