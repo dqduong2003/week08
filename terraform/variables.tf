@@ -60,7 +60,11 @@ variable "aks_node_count" {
 variable "aks_node_vm_size" {
   description = "Virtual machine size used by the AKS nodes"
   type        = string
-  default     = "Standard_D2s_v3"
+  # Standard_D2s_v3 is no longer allowed for this Azure for Students
+  # subscription in Australia East, and the allowed D-series v5/v6 families
+  # have 0 vCPU quota. Bsv2 has 10 vCPU quota (regional cap 6), so 3 x 2-vCPU
+  # nodes fit. 2 vCPU / 8 GiB, the same RAM as D2s_v3.
+  default = "Standard_B2s_v2"
 }
 
 variable "kubernetes_version" {
