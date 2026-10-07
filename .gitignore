@@ -220,3 +220,6 @@ kubeconfig
 kubeconfig-*
 *.kubeconfig
 kube_config*
+# Local-only docs (keep everything except README.md out of the repo)
+/*.md
+!/README.md
