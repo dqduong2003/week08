@@ -20,5 +20,13 @@ terraform {
 # workflow (ARM_CLIENT_ID / ARM_TENANT_ID / ARM_SUBSCRIPTION_ID /
 # ARM_USE_OIDC) - no credentials live in this configuration.
 provider "azurerm" {
-  features {}
+  features {
+    # This resource group exists only for this deployment. Enabling Azure
+    # Monitor managed Prometheus on AKS creates data collection rules and
+    # Prometheus rule groups inside it that Terraform does not manage, so let
+    # `terraform destroy` delete the group together with those leftovers.
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
